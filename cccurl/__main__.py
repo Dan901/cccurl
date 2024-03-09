@@ -1,6 +1,6 @@
 import argparse
 
-from cccurl.http_requests import delete, get
+from cccurl.http_requests import delete, get, post, put
 
 
 def main():
@@ -9,9 +9,13 @@ def main():
     url = args.url
     method = args.request
     if not method or method == "GET":
-        get(url, verbose=args.verbose)
+        get(url, headers=args.header, verbose=args.verbose)
     if method == "DELETE":
-        delete(url, verbose=args.verbose)
+        delete(url, headers=args.header, verbose=args.verbose)
+    if method == "POST":
+        post(url, headers=args.header, data=args.data, verbose=args.verbose)
+    if method == "PUT":
+        put(url, headers=args.header, data=args.data, verbose=args.verbose)
 
 
 def create_arg_parser():
@@ -37,6 +41,17 @@ def create_arg_parser():
         "--request",
         help="Change the method to use.",
         choices=["GET", "DELETE", "POST", "PUT"],
+    )
+    parser.add_argument(
+        "-d",
+        "--data",
+        help="Data to send in the body of the request.",
+    )
+    parser.add_argument(
+        "-H",
+        "--header",
+        help="Add a header to the request.",
+        action="append",
     )
     return parser
 

@@ -5,17 +5,15 @@ from cccurl.errors import CONNECTION_CLOSED, MISSING_CONTENT_LENGTH
 BUFFER_SIZE = 4096
 
 
-def send_request(socket: socket.socket, request: str) -> tuple[str, str]:
-    socket.sendall(request.encode())
-    response = _receive_response(socket)
-    return response
+def send(sock: socket.socket, request: bytearray):
+    sock.sendall(request)
 
 
-def _receive_response(socket: socket.socket) -> tuple[str, str]:
+def receive(sock: socket.socket) -> tuple[str, str]:
     response = bytearray()
     headers_received = False
     while True:
-        data = socket.recv(BUFFER_SIZE)
+        data = sock.recv(BUFFER_SIZE)
         if not data:
             raise ValueError(CONNECTION_CLOSED)
         response.extend(data)
