@@ -1,36 +1,47 @@
-INVALID_URL = "Invalid URL format"
+import socket
+from cccurl.errors import INVALID_URL, PROTOCOL_NOT_SUPPORTED
+
+from cccurl.socket_utils import send_request
+from cccurl.url_parser import parse_host, parse_protocol
+
+OUTBOUND = ">"
+INBOUND = "<"
 
 
-def get(url: str):
-    protocol, remaining = _parse_protocol(url)
+def get(url: str, verbose: bool = False):
+    _handle_request(url, "GET", verbose)
+
+
+def delete(url: str, verbose: bool = False):
+    _handle_request(url, "DELETE", verbose)
+
+
+def _handle_request(url: str, method: str, verbose: bool):
+    protocol, remaining = parse_protocol(url)
     if protocol != "http":
-        raise ValueError("Only HTTP protocol is supported")
+        raise ValueError(PROTOCOL_NOT_SUPPORTED)
     if not remaining:
         raise ValueError(INVALID_URL)
-    host, port, remaining = _parse_host(remaining)
-    print(f"connecting to {host}")
-    print(f"Sending request GET {remaining} HTTP/1.1")
-    print(f"Host: {host}")
-    print("Accept: */*")
+    host, port, remaining = parse_host(remaining)
+    request = (
+        f"{method} {remaining} HTTP/1.1\r\n"
+        f"Host: {host}\r\n"
+        "Accept: */*\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+    )
+    if verbose:
+        formatted_request = _append_to_each_line(request, OUTBOUND)
+        print(f"{formatted_request}", end="")
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    headers, content = send_request(s, request)
+    if verbose:
+        formatted_headers = _append_to_each_line(headers, INBOUND)
+        print(f"{formatted_headers}", end="")
+    print(f"{content}", end="")
 
 
-def _parse_protocol(url) -> tuple[str, str]:
-    parts = url.split("://")
-    if len(parts) != 2:
-        raise ValueError(INVALID_URL)
-    protocol, remaining = parts
-    return protocol, remaining
-
-
-def _parse_host(remaining) -> tuple[str, str, str]:
-    parts = remaining.split("/", maxsplit=2)
-    host = parts[0]
-    remaining = "/" + (parts[1] if len(parts) > 1 else "")
-    host_parts = host.split(":")
-    if len(host_parts) > 2:
-        raise ValueError(INVALID_URL)
-    if len(host_parts) == 2:
-        host, port = host_parts
-    else:
-        port = 80
-    return host, port, remaining
+def _append_to_each_line(text: str, prefix: str) -> str:
+    return "".join(f"{prefix} {line}" for line in text.splitlines(keepends=True))
